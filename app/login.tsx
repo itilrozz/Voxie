@@ -67,7 +67,7 @@ export default function LoginScreen() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Welcome Back</Text>
+      <Text style={styles.title}>Welcome Back!</Text>
       
       <View style={styles.inputContainer}>
         <TextInput 
@@ -107,7 +107,7 @@ export default function LoginScreen() {
       </TouchableOpacity>
       
       <TouchableOpacity onPress={() => router.push("/register")}>
-        <Text style={styles.link}>No account? Register</Text>
+        <Text style={styles.link}>No account? Register here!</Text>
       </TouchableOpacity>
     </View>
   );
