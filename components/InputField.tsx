@@ -1,4 +1,3 @@
-import React from "react";
 import { StyleSheet, TextInput } from "react-native";
 import { InputFieldProps } from "../types";
 
@@ -15,7 +14,7 @@ export default function InputField({
       value={value}
       onChangeText={onChangeText}
       placeholder={placeholder}
-      placeholderTextColor="#BBB"
+      placeholderTextColor="#000c74"
       secureTextEntry={secureTextEntry}
       multiline={multiline}
       style={[styles.input, style]}
@@ -24,5 +23,13 @@ export default function InputField({
 }
 
 const styles = StyleSheet.create({
-  input: { backgroundColor: "#fff", padding: 12, borderRadius: 6, marginBottom: 12 },
+  input: { 
+    backgroundColor: "#f0f2ff", 
+    color: "#081269",
+    borderColor: "#c7c9ff",
+    borderWidth: 1,
+    padding: 12, 
+    borderRadius: 6, 
+    marginBottom: 12 
+  },
 });

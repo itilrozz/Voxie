@@ -1,12 +1,14 @@
 import { collection, onSnapshot, orderBy, query } from "firebase/firestore";
 import { useEffect, useState } from "react";
-import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, ScrollView, StyleSheet, Text, View, useColorScheme } from "react-native";
 import PostCard from "../../components/PostCard";
+import Colors from "../../constants/Colors";
 import { db } from "../../lib/firebaseConfig";
 
 export default function HomeScreen() {
   const [posts, setPosts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const colorScheme = useColorScheme();
 
   useEffect(() => {
     const q = query(collection(db, "posts"), orderBy("createdAt", "desc"));
@@ -16,8 +18,9 @@ export default function HomeScreen() {
       q,
       (querySnapshot) => {
         const postList: any[] = [];
-        querySnapshot.forEach((doc) => {
-          postList.push({ id: doc.id, ...doc.data() });
+        querySnapshot.forEach((docSnap) => {
+          const data = docSnap.data();
+          postList.push({ id: docSnap.id, ...data });
         });
         setPosts(postList);
         setLoading(false);
@@ -34,16 +37,16 @@ export default function HomeScreen() {
 
   if (loading) {
     return (
-      <View style={styles.center}>
-        <Text style={styles.loadingText}>Loading posts...</Text>
+      <View style={[styles.center, { backgroundColor: Colors[colorScheme ?? "light"].background }]}>
+        <ActivityIndicator size="large" color={Colors[colorScheme ?? "light"].primary} />
       </View>
     );
   }
 
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView style={[styles.container, { backgroundColor: Colors[colorScheme ?? "light"].background }]}>
       {posts.length === 0 ? (
-        <Text style={styles.emptyText}>No posts yet.</Text>
+        <Text style={[styles.emptyText, { color: Colors[colorScheme ?? "light"].text }]}>No posts yet.</Text>
       ) : (
         posts.map((post) => <PostCard key={post.id} post={post} />)
       )}
@@ -54,20 +57,14 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F5EFE6", 
-    padding: 16,
+    padding: 10,
   },
   center: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
   },
-  loadingText: {
-    color: "#6D94C5", 
-    fontSize: 16,
-  },
   emptyText: {
-    color: "#E8DFCA", 
     fontSize: 16,
     textAlign: "center",
     marginTop: 20,

@@ -1,6 +1,6 @@
 import { useRouter } from "expo-router";
 import { addDoc, collection, serverTimestamp } from "firebase/firestore";
-import React, { useState } from "react";
+import { useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -11,7 +11,9 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  useColorScheme,
 } from "react-native";
+import Colors from "../../constants/Colors";
 import { auth, db } from "../../lib/firebaseConfig";
 
 export default function NewPostScreen() {
@@ -20,6 +22,7 @@ export default function NewPostScreen() {
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<{ title?: string; content?: string }>({});
   const router = useRouter();
+  const colorScheme = useColorScheme();
 
   const validateForm = () => {
     const newErrors: { title?: string; content?: string } = {};
@@ -68,6 +71,8 @@ export default function NewPostScreen() {
         title: title.trim(),
         content: content.trim(),
         createdAt: serverTimestamp(),
+        checkCount: 0,
+        xCount: 0
       });
 
       setTitle("");
@@ -93,50 +98,70 @@ export default function NewPostScreen() {
   return (
     <KeyboardAvoidingView
       behavior={Platform.select({ ios: "padding", android: undefined })}
-      style={styles.screen}
+      style={[styles.screen, { backgroundColor: Colors[colorScheme ?? "light"].background }]}
     >
-      <View style={styles.container}>
-        <Text style={styles.header}>Create Post</Text>
+      <View style={[styles.container, { backgroundColor: Colors[colorScheme ?? "light"].background }]}>
+        <Text style={[styles.header, { color: "#081269" }]}>Create Post</Text>
 
         <View style={styles.inputContainer}>
           <TextInput
-            style={[styles.input, errors.title && styles.inputError]}
+            style={[
+              styles.input, 
+              errors.title && styles.inputError,
+              { 
+                backgroundColor: Colors[colorScheme ?? "light"].inputBackground,
+                color: "#081269",
+                borderColor: Colors[colorScheme ?? "light"].border
+              }
+            ]}
             placeholder="Title (optional)"
-            placeholderTextColor="#999"
+            placeholderTextColor={Colors[colorScheme ?? "light"].secondary}
             value={title}
             onChangeText={setTitle}
             returnKeyType="next"
             maxLength={100}
           />
-          {errors.title && <Text style={styles.errorText}>{errors.title}</Text>}
-          <Text style={styles.characterCount}>{title.length}/100</Text>
+          {errors.title && <Text style={[styles.errorText, { color: Colors[colorScheme ?? "light"].error }]}>{errors.title}</Text>}
+          <Text style={[styles.characterCount, { color: Colors[colorScheme ?? "light"].secondary }]}>{title.length}/100</Text>
         </View>
 
         <View style={styles.inputContainer}>
           <TextInput
-            style={[styles.input, styles.textArea, errors.content && styles.inputError]}
+            style={[
+              styles.input, 
+              styles.textArea, 
+              errors.content && styles.inputError,
+              { 
+                backgroundColor: Colors[colorScheme ?? "light"].inputBackground,
+                color: "#081269",
+                borderColor: Colors[colorScheme ?? "light"].border
+              }
+            ]}
             placeholder="Write your post..."
-            placeholderTextColor="#999"
+            placeholderTextColor={Colors[colorScheme ?? "light"].secondary}
             value={content}
             onChangeText={setContent}
             multiline
             textAlignVertical="top"
             maxLength={2000}
           />
-          {errors.content && <Text style={styles.errorText}>{errors.content}</Text>}
-          <Text style={styles.characterCount}>{content.length}/2000</Text>
+          {errors.content && <Text style={[styles.errorText, { color: Colors[colorScheme ?? "light"].error }]}>{errors.content}</Text>}
+          <Text style={[styles.characterCount, { color: Colors[colorScheme ?? "light"].secondary }]}>{content.length}/2000</Text>
         </View>
 
         <TouchableOpacity
-          style={[styles.button, loading && styles.buttonDisabled]}
+          style={[
+            styles.button, 
+            loading && styles.buttonDisabled,
+            { backgroundColor: Colors[colorScheme ?? "light"].primary }
+          ]}
           onPress={handleCreate}
           disabled={loading}
         >
-          {loading ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.buttonText}>Post</Text>
-          )}
+          {loading ? 
+            <ActivityIndicator color={Colors[colorScheme ?? "light"].white} /> : 
+            <Text style={[styles.buttonText, { color: Colors[colorScheme ?? "light"].white }]}>Post</Text>
+          }
         </TouchableOpacity>
       </View>
     </KeyboardAvoidingView>

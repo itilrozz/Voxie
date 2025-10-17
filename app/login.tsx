@@ -3,6 +3,7 @@ import { signInWithEmailAndPassword } from "firebase/auth";
 import { useState } from "react";
 import { ActivityIndicator, Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { auth } from "../lib/firebaseConfig";
+import Colors from "../constants/Colors";
 
 export default function LoginScreen() {
   const [email, setEmail] = useState("");
@@ -68,7 +69,7 @@ export default function LoginScreen() {
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Welcome To Voxie!</Text>
-      <Text style={styles.p}>your community to share your thoughts and ideas</Text>
+      <Text style={styles.subtitle}>Your anonymous school community platform</Text>
       
       <View style={styles.inputContainer}>
         <TextInput 
@@ -79,6 +80,7 @@ export default function LoginScreen() {
           keyboardType="email-address"
           autoCapitalize="none"
           autoCorrect={false}
+          placeholderTextColor="#6D6D6D"
         />
         {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
       </View>
@@ -91,6 +93,7 @@ export default function LoginScreen() {
           onChangeText={setPassword} 
           style={[styles.input, errors.password && styles.inputError]}
           autoCapitalize="none"
+          placeholderTextColor="#6D6D6D"
         />
         {errors.password && <Text style={styles.errorText}>{errors.password}</Text>}
       </View>
@@ -100,76 +103,86 @@ export default function LoginScreen() {
         style={[styles.button, loading && styles.buttonDisabled]}
         disabled={loading}
       >
-        {loading ? (
-          <ActivityIndicator color="#fff" />
-        ) : (
+        {loading ? 
+          <ActivityIndicator color="#ffffff" /> : 
           <Text style={styles.buttonText}>Login</Text>
-        )}
+        }
       </TouchableOpacity>
       
-      <TouchableOpacity onPress={() => router.push("/register")}>
-        <Text style={styles.link}>No account? Register here!</Text>
-      </TouchableOpacity>
+      <View style={styles.footer}>
+        <Text style={styles.footerText}>Don't have an account? </Text>
+        <TouchableOpacity onPress={() => router.push("/register")}>
+          <Text style={styles.link}>Register</Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { 
-    flex: 1, 
-    justifyContent: "center", 
-    padding: 20, 
-    backgroundColor: "#F5EFE6", 
+  container: {
+    flex: 1,
+    padding: 20,
+    justifyContent: "center",
+    backgroundColor: "#ffffff",
   },
-  p: { 
-    fontSize: 16, 
-    fontWeight: "400", 
-    marginBottom: 20, 
-    color: "#6D94C5", 
+  title: {
+    fontSize: 28,
+    fontWeight: "bold",
+    marginBottom: 8,
     textAlign: "center",
+    color: "#081269",
   },
-  title: { 
-    fontSize: 26, 
-    fontWeight: "700", 
-    marginBottom: 20, 
-    color: "#6D94C5", 
+  subtitle: {
+    fontSize: 16,
+    marginBottom: 32,
     textAlign: "center",
+    color: "#000c74",
   },
-  inputContainer: { 
-    marginBottom: 12 
+  inputContainer: {
+    marginBottom: 16,
   },
-  input: { 
-    backgroundColor: "#CBDCEB",
-    padding: 12, 
-    borderRadius: 6, 
-    color: "#544e3eff", 
+  input: {
+    backgroundColor: "#f0f2ff",
+    padding: 12,
+    borderRadius: 8,
+    fontSize: 16,
+    color: "#000c74",
   },
-  inputError: { 
-    borderColor: "#ff4444", 
-    borderWidth: 1 
+  inputError: {
+    borderWidth: 1,
+    borderColor: "#ff3b30",
   },
-  errorText: { 
-    color: "#ff4444", 
-    fontSize: 12, 
-    marginTop: 4 
+  errorText: {
+    color: "#ff3b30",
+    marginTop: 4,
+    fontSize: 12,
   },
-  button: { 
-    backgroundColor: "#6D94C5", 
-    padding: 14, 
-    borderRadius: 6, 
-    marginTop: 8, 
+  button: {
+    backgroundColor: "#081269",
+    padding: 16,
+    borderRadius: 8,
+    alignItems: "center",
+    marginTop: 8,
   },
-  buttonDisabled: { 
-    opacity: 0.6 
+  buttonDisabled: {
+    opacity: 0.7,
   },
-  buttonText: { 
-    color: "#F5EFE6", 
-    fontWeight: "600", 
-    textAlign: "center", 
+  buttonText: {
+    color: "#ffffff",
+    fontWeight: "bold",
+    fontSize: 16,
   },
-  link: { 
-    marginTop: 12, 
-    textAlign: "center", 
-    color: "#544e3eff", 
+  footer: {
+    flexDirection: "row",
+    justifyContent: "center",
+    marginTop: 24,
+  },
+  footerText: {
+    color: "#000c74",
+  },
+  link: {
+    color: "#081269",
+    fontWeight: "bold",
   },
 });

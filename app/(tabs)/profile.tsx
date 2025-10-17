@@ -1,4 +1,4 @@
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { signOut } from "firebase/auth";
 import {
   collection,
@@ -7,7 +7,7 @@ import {
   onSnapshot,
   query,
   updateDoc,
-  where,
+  where
 } from "firebase/firestore";
 import { useEffect, useState } from "react";
 import {
@@ -15,57 +15,121 @@ import {
   FlatList,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
+  useColorScheme
 } from "react-native";
+import PostCard from "../../components/PostCard";
+import Colors from "../../constants/Colors";
 import { useAuth } from "../../hooks/useAuth";
 import { auth, db } from "../../lib/firebaseConfig";
 
+interface Post {
+  id: string;
+  title?: string;
+  content: string;
+  uid: string;
+  [key: string]: any;
+}
+
 export default function ProfileScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams<{ userId?: string }>();
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
-  const [posts, setPosts] = useState<any[]>([]);
+  const [posts, setPosts] = useState<Post[]>([]);
   const [postsLoading, setPostsLoading] = useState(true);
+  // comments are shown inline within PostCard; no separate comments list here
   const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
   const [editContent, setEditContent] = useState("");
   const [isEditing, setIsEditing] = useState(false);
+  const colorScheme = useColorScheme();
+
+  // Whose profile are we showing?
+  const profileUserId = params?.userId || user?.uid || null;
+  const isSelf = !!user && profileUserId === user.uid;
 
   
   useEffect(() => {
-    if (!user) return;
+    if (!profileUserId) return;
 
     const postsRef = collection(db, "posts");
-    const q = query(postsRef, where("uid", "==", user.uid));
-    
-    // Set up real-time listener for user's posts
-    const unsubscribe = onSnapshot(
-      q,
+
+    // Listen for posts created with field uid
+    const unsubscribeUid = onSnapshot(
+      query(postsRef, where("uid", "==", profileUserId)),
       (querySnapshot) => {
-        const userPosts: any[] = [];
+        const arr: Post[] = [];
         querySnapshot.forEach((docSnap) => {
           const data = docSnap.data();
-          userPosts.push({
+          const createdAt =
+            typeof data?.createdAt?.toDate === "function"
+              ? data.createdAt.toDate().toLocaleString()
+              : typeof data?.createdAt === "string"
+                ? data.createdAt
+                : "Unknown date";
+          arr.push({
             id: docSnap.id,
             ...data,
-            createdAt: data.createdAt?.toDate
-              ? data.createdAt.toDate().toLocaleString()
-              : "Unknown date",
-          });
+            // Ensure required fields for Post type exist
+            content: typeof data?.content === "string" ? data.content : "",
+            uid: (data?.uid as string) || (data?.authorId as string) || "",
+            createdAt,
+          } as Post);
         });
-        setPosts(userPosts);
+        setPosts((prev) => {
+          // merge by id with any authorId results (set below)
+          const map = new Map<string, Post>();
+          [...arr, ...prev].forEach((p) => map.set(p.id, p));
+          return Array.from(map.values());
+        });
         setPostsLoading(false);
       },
       (error) => {
-        console.error("Error listening to user posts:", error);
+        console.error("Error listening to user posts (uid):", error);
         setPostsLoading(false);
       }
     );
 
-    // Cleanup listener on component unmount
-    return () => unsubscribe();
-  }, [user]);
+    // Listen for posts/reposts created with field authorId (used by reposts)
+    const unsubscribeAuthor = onSnapshot(
+      query(postsRef, where("authorId", "==", profileUserId)),
+      (querySnapshot) => {
+        const arr: Post[] = [];
+        querySnapshot.forEach((docSnap) => {
+          const data = docSnap.data();
+          const createdAt =
+            typeof data?.createdAt?.toDate === "function"
+              ? data.createdAt.toDate().toLocaleString()
+              : typeof data?.createdAt === "string"
+                ? data.createdAt
+                : "Unknown date";
+          arr.push({
+            id: docSnap.id,
+            ...data,
+            content: typeof data?.content === "string" ? data.content : "",
+            uid: (data?.uid as string) || (data?.authorId as string) || "",
+            createdAt,
+          } as Post);
+        });
+        setPosts((prev) => {
+          const map = new Map<string, Post>();
+          [...prev, ...arr].forEach((p) => map.set(p.id, p));
+          return Array.from(map.values());
+        });
+        setPostsLoading(false);
+      },
+      (error) => {
+        console.error("Error listening to user posts (authorId):", error);
+        setPostsLoading(false);
+      }
+    );
+
+    return () => {
+      unsubscribeUid();
+      unsubscribeAuthor();
+    };
+  }, [profileUserId]);
 
   const handleLogout = async () => {
     setLoading(true);
@@ -109,19 +173,22 @@ export default function ProfileScreen() {
   };
 
   return (
-    <View style={styles.container}>
-      {user&&(
-        <Text style={styles.title}>
-    {user.displayName ? user.displayName : "No username set"}
-  </Text>
-    )}
-      {user && (
+    <View style={[styles.container, { backgroundColor: Colors[colorScheme ?? "light"].background }]}>
+      {profileUserId && (
+        <Text style={[styles.title, { color: "#081269"}]}>
+          {isSelf ? (user?.displayName || "No username set") : `User Profile`}
+        </Text>
+      )}
+      {user && isSelf && (
         <>
-          <Text style={styles.label}>Email: {user.email}</Text>
+          <Text style={[styles.label, { color: "#081269"}]}>Email: {user.email}</Text>
           
 
-          <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-            <Text style={styles.logoutButtonText}>
+          <TouchableOpacity 
+            style={[styles.logoutButton, { backgroundColor: Colors[colorScheme ?? "light"].primary }]} 
+            onPress={handleLogout}
+          >
+            <Text style={[styles.logoutButtonText, { color: Colors[colorScheme ?? "dark"].white }]}>
               {loading ? "Logging out..." : "Logout"}
             </Text>
           </TouchableOpacity>
@@ -129,81 +196,19 @@ export default function ProfileScreen() {
       )}
 
      
-      <Text style={[styles.title, { marginTop: 20 }]}>Your Posts</Text>
-      {postsLoading ? (
-        <ActivityIndicator size="small" color="#ffffff" />
-      ) : posts.length === 0 ? (
-        <Text style={styles.label}>You have not created any posts yet.</Text>
-        
-      ) : (
+      <Text style={[styles.title, { marginTop: 20, color: "#081269"}]}>
+        {isSelf ? "Your Posts & Reposts" : "Posts & Reposts"}
+      </Text>
+      {postsLoading ? 
+        <ActivityIndicator size="small" color={Colors[colorScheme ?? "light"].primary} /> 
+      : posts.length === 0 ? 
+        <Text style={[styles.label, { color: "#081269" }]}>You have not created any posts yet.</Text>
+      : (
         <FlatList
           data={posts}
           keyExtractor={(item) => item.id}
           renderItem={({ item }) => (
-            <View style={styles.postContainer}>
-              {isEditing && selectedPostId === item.id ? (
-                <>
-                  <TextInput
-                    style={styles.textInput}
-                    value={editContent}
-                    onChangeText={setEditContent}
-                    multiline
-                  />
-                  <View style={styles.dropdown}>
-                    <TouchableOpacity
-                      style={styles.saveButton}
-                      onPress={() => handleSave(item.id)}
-                    >
-                      <Text style={styles.actionText}>Save</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={styles.cancelButton}
-                      onPress={() => {
-                        setIsEditing(false);
-                        setSelectedPostId(null);
-                      }}
-                    >
-                      <Text style={styles.actionText}>Cancel</Text>
-                    </TouchableOpacity>
-                  </View>
-                </>
-              ) : (
-                <>
-                  <Text style={styles.postTitle}>
-                    {item.title || "Untitled"}
-                  </Text>
-                  <Text style={styles.postContent}>{item.content || ""}</Text>
-                  <Text style={styles.postDate}>{item.createdAt}</Text>
-
-                  {selectedPostId === item.id ? (
-                    <View style={styles.dropdown}>
-                      <TouchableOpacity
-                        style={styles.editButton}
-                        onPress={() => handleEdit(item.id, item.content)}
-                      >
-                        <Text style={styles.actionText}>Edit</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        style={styles.deleteButton}
-                        onPress={() => handleDelete(item.id)}
-                      >
-                        <Text style={styles.actionText}>Delete</Text>
-                      </TouchableOpacity>
-                    </View>
-                  ) : (
-                    <TouchableOpacity
-                      onPress={() =>
-                        setSelectedPostId(
-                          selectedPostId === item.id ? null : item.id
-                        )
-                      }
-                    >
-                      <Text style={styles.toggleText}>⋮ Options</Text>
-                    </TouchableOpacity>
-                  )}
-                </>
-              )}
-            </View>
+            <PostCard post={item} />
           )}
         />
       )}
@@ -215,59 +220,61 @@ const styles = StyleSheet.create({
   container: { 
     flex: 1, 
     padding: 16, 
-    backgroundColor: "#F5EFE6" 
+    backgroundColor: "#ffffff" 
   },
   title: { 
     fontSize: 20, 
     fontWeight: "700", 
     marginBottom: 12, 
-    color: "#6D94C5" 
+    color: "#081269" 
   },
   label: { 
-    color: "#6D94C5", 
+    color: "#081269", 
     fontSize: 16, 
     marginBottom: 12 
   },
   logoutButton: {
-    backgroundColor: "#E8DFCA", 
+    backgroundColor: "#081269", 
     padding: 10,
     borderRadius: 6,
     alignItems: "center",
   },
   logoutButtonText: { 
-    color: "#6D94C5", 
+    color: "#ffffff", 
     fontWeight: "600" 
   },
   postContainer: {
-    backgroundColor: "#CBDCEB", 
+    backgroundColor: "#ffffff", 
     padding: 12,
     borderRadius: 6,
     marginBottom: 12,
+    borderWidth: 1,
+    borderColor: "#c7c9ff",
   },
   postTitle: {
     fontSize: 16,
     fontWeight: "700",
-    color: "#6D94C5", 
+    color: "#081269", 
     marginBottom: 4,
   },
   postContent: { 
     fontSize: 14, 
-    color: "#333", 
+    color: "#000c74", 
     marginBottom: 6 
   },
   postDate: { 
     fontSize: 12, 
-    color: "#6D94C5", 
+    color: "#000c74", 
     textAlign: "right" 
   },
   textInput: {
-    backgroundColor: "#E8DFCA", 
+    backgroundColor: "#f0f2ff", 
     padding: 6,
     fontSize: 14,
     marginBottom: 8,
-    color: "#333", 
+    color: "#081269", 
     borderWidth: 1,
-    borderColor: "#6D94C5", 
+    borderColor: "#c7c9ff", 
     borderRadius: 6,
   },
   dropdown: {
@@ -276,38 +283,38 @@ const styles = StyleSheet.create({
     justifyContent: "flex-end",
   },
   editButton: {
-    backgroundColor: "#6D94C5", 
+    backgroundColor: "#081269", 
     paddingVertical: 4,
     paddingHorizontal: 8,
     borderRadius: 4,
     marginRight: 6,
   },
   deleteButton: {
-    backgroundColor: "#E8DFCA", 
+    backgroundColor: "#ff3b30", 
     paddingVertical: 4,
     paddingHorizontal: 8,
     borderRadius: 4,
   },
   saveButton: {
-    backgroundColor: "#CBDCEB", 
+    backgroundColor: "#081269", 
     paddingVertical: 4,
     paddingHorizontal: 8,
     borderRadius: 4,
     marginRight: 6,
   },
   cancelButton: {
-    backgroundColor: "#E8DFCA", 
+    backgroundColor: "#6D6D6D", 
     paddingVertical: 4,
     paddingHorizontal: 8,
     borderRadius: 4,
   },
   actionText: {
-    color: "#333", 
+    color: "#ffffff", 
     fontSize: 12,
     fontWeight: "bold",
   },
   toggleText: {
-    color: "#6D94C5", 
+    color: "#081269", 
     fontSize: 12,
     textAlign: "right",
     marginTop: 6,
